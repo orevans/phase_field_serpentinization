@@ -297,46 +297,6 @@ def val(x):
         <include_in_visualization/>
       </diagnostics>
     </field>
-    <field name="CrackPorosity">
-      <ufl_symbol name="global">
-        <string_value lines="1">fc</string_value>
-      </ufl_symbol>
-      <type name="Function">
-        <rank name="Scalar" rank="0">
-          <element name="P2">
-            <family>
-              <string_value lines="1">CG</string_value>
-            </family>
-            <degree>
-              <integer_value rank="0">2</integer_value>
-            </degree>
-          </element>
-          <initial_condition type="initial_condition" name="WholeMesh">
-            <python rank="0">
-              <string_value lines="20" type="code" language="python">import numpy as np
-def val(x):
-  global np
-  return 2.*np.exp(-x[0]**2/1.e-4)</string_value>
-            </python>
-          </initial_condition>
-          <boundary_condition name="Left">
-            <boundary_ids>
-              <integer_value shape="1" rank="1">1</integer_value>
-            </boundary_ids>
-            <sub_components name="All">
-              <type type="boundary_condition" name="Dirichlet">
-                <constant>
-                  <real_value rank="0">2.</real_value>
-                </constant>
-              </type>
-            </sub_components>
-          </boundary_condition>
-        </rank>
-      </type>
-      <diagnostics>
-        <include_in_visualization/>
-      </diagnostics>
-    </field>
     <coefficient name="BulkModulus">
       <ufl_symbol name="global">
         <string_value lines="1">Ke</string_value>
@@ -539,6 +499,7 @@ values[0] = Da;</string_value>
         </rank>
       </type>
       <diagnostics/>
+      <comment>Inverse of artifical viscosity parameter \psi</comment>
     </coefficient>
     <coefficient name="MaximumPorosity">
       <ufl_symbol name="global">
@@ -678,25 +639,28 @@ values[0] = value;</string_value>
         </rank>
       </type>
       <diagnostics/>
+      <comment>Diffusion coefficient for fluid components</comment>
     </coefficient>
     <nonlinear_solver name="Solver">
       <type name="SNES">
         <form name="Residual" rank="0">
-          <string_value lines="20" type="code" language="python"># Pressure and displacement residuals
+          <string_value lines="20" type="code" language="python"># Displacement residual
 epsilon_t = sym(grad(u_t))
+F_u = (inner(epsilon_t, sigma_eff) + inner(u_t, grad(p_i)))*dx
 
+# Pressure residual
 F_p = p_t*div(u_i - u_n)*dx + beta*p_t*f_i*(p_i - p_n)*dx + \
       + dt*inner(dot(K_phi, grad(p_i)), grad(p_t))*dx \
       - dt*p_t*S*Da*R_p*dx
 
-F_u = (inner(epsilon_t, sigma_eff) + inner(u_t, grad(p_i)))*dx
-
-# Porosity and serpentine fraction residuals
-F_fB = fB_t*(fB_i - fB_n + phi0*fB_i*div(u_i - u_n) - dt*Da*S_sp*R_phi_B)*dx
-
+# Porosity residual
 F_f = f_t*(f_i - f_n - dt*S*Da*R_phi)*dx - f_t*div(u_i - u_n)*dx \
       + dt*D_phi*inner(d_i*grad(f_i),grad(f_t))*dx
 
+# Serpentine fraction residual
+F_fB = fB_t*(fB_i - fB_n + phi0*fB_i*div(u_i - u_n) - dt*Da*S_sp*R_phi_B)*dx
+
+# Total residual
 F = F_u + F_p + F_f + F_fB</string_value>
           <ufl_symbol name="solver">
             <string_value lines="1">F</string_value>
