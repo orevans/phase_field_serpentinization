@@ -73,9 +73,6 @@ omp = 1. - phi0*f_i
 # Availability function
 S = f_i*(omp - fB_i)
 
-# Permeability tensor
-K_phi = f_i*f_i *Identity(2)+ d_i**2*K_crack*(Identity(2)) 
-
 # Permeability
 grad_d = grad(d_i)/(sqrt(grad(d_i)[0]**2 + grad(d_i)[1]**2) + 1.e-8)
 K_phi = f_i**2*(Identity(2)+ d_i**2*(Identity(2) - outer(grad_d, grad_d)))
