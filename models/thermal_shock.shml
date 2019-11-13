@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<harness_options>
+  <length>
+    <string_value lines="1">short</string_value>
+  </length>
+  <owner>
+    <string_value lines="1">oevans</string_value>
+  </owner>
+  <description>
+    <string_value lines="1">thermal shock problem</string_value>
+  </description>
+  <simulations>
+    <simulation name="thermoelastic_damage">
+      <input_file>
+        <string_value lines="1" type="filename">thermal_shock.tfml</string_value>
+      </input_file>
+      <run_when name="input_changed_or_output_missing"/>
+      <number_processes>
+        <integer_value rank="0">48</integer_value>
+      </number_processes>
+      <parameter_sweep>
+        <parameter name="intensity">
+          <values>
+            <string_value lines="1">4</string_value>
+          </values>
+          <update>
+            <string_value lines="20" type="code" language="python">import libspud
+libspud.set_option("/system::ThermoElasticity/coefficient::IntensityFactor/type::Constant/rank::Scalar/value::WholeMesh/constant",float(intensity))</string_value>
+            <single_build/>
+          </update>
+        </parameter>
+      </parameter_sweep>
+      <required_input>
+        <filenames name="Mesh">
+          <string>
+            <string_value lines="1" type="filename">mesh/rectangle.xml</string_value>
+          </string>
+        </filenames>
+      </required_input>
+    </simulation>
+  </simulations>
+</harness_options>

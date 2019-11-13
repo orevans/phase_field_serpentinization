@@ -1,0 +1,686 @@
+<?xml version='1.0' encoding='utf-8'?>
+<terraferma_options>
+  <geometry>
+    <dimension>
+      <integer_value rank="0">2</integer_value>
+    </dimension>
+    <mesh name="Mesh">
+      <source name="File">
+        <file>
+          <string_value lines="1" type="filename">rectangle.xml</string_value>
+        </file>
+        <cell>
+          <string_value lines="1">triangle</string_value>
+        </cell>
+      </source>
+    </mesh>
+  </geometry>
+  <io>
+    <output_base_name>
+      <string_value lines="1">thermal</string_value>
+    </output_base_name>
+    <visualization>
+      <element name="P2">
+        <family>
+          <string_value lines="1">CG</string_value>
+        </family>
+        <degree>
+          <integer_value rank="0">2</integer_value>
+        </degree>
+      </element>
+    </visualization>
+    <dump_periods>
+      <visualization_period_in_timesteps>
+        <integer_value rank="0">10</integer_value>
+      </visualization_period_in_timesteps>
+    </dump_periods>
+    <detectors/>
+    <checkpointing>
+      <checkpoint_period_in_timesteps>
+        <integer_value rank="0">100</integer_value>
+      </checkpoint_period_in_timesteps>
+    </checkpointing>
+  </io>
+  <timestepping>
+    <current_time>
+      <real_value rank="0">0.0001</real_value>
+    </current_time>
+    <finish_time>
+      <real_value rank="0">20.</real_value>
+    </finish_time>
+    <timestep>
+      <coefficient name="Timestep">
+        <ufl_symbol name="global">
+          <string_value lines="1">dt</string_value>
+        </ufl_symbol>
+        <type name="Constant">
+          <rank name="Scalar" rank="0">
+            <value name="WholeMesh">
+              <constant>
+                <real_value rank="0">0.01</real_value>
+              </constant>
+            </value>
+          </rank>
+        </type>
+      </coefficient>
+    </timestep>
+  </timestepping>
+  <global_parameters>
+    <ufl>
+      <string_value lines="20" type="code" language="python"># Degradation function
+g = (1. - d_i)**2 + eta
+
+# Strain tensor
+epsilon = sym(grad(u_i)) - T*Identity(2)
+epsilond = epsilon - tr(epsilon)/3.*Identity(2)
+
+# Effective stress tensor
+sigma_plus = Ke*0.5*(tr(epsilon) + abs(tr(epsilon)))*Identity(2) + 2.*G*epsilond
+sigma_minus = Ke*0.5*(tr(epsilon) - abs(tr(epsilon)))*Identity(2)
+sigma = g*sigma_plus + sigma_minus
+
+# Tensile component of the elastic energy density
+psi = 0.5*Ke*(0.5*(tr(epsilon) + abs(tr(epsilon))))**2 + G*inner(epsilond, epsilond)</string_value>
+    </ufl>
+    <dolfin>
+      <allow_extrapolation/>
+      <ghost_mode name="shared_facet"/>
+    </dolfin>
+  </global_parameters>
+  <system name="ThermoElasticity">
+    <mesh name="Mesh"/>
+    <ufl_symbol name="global">
+      <string_value lines="1">us</string_value>
+    </ufl_symbol>
+    <field name="Displacement">
+      <ufl_symbol name="global">
+        <string_value lines="1">u</string_value>
+      </ufl_symbol>
+      <type name="Function">
+        <rank name="Vector" rank="1">
+          <element name="P2">
+            <family>
+              <string_value lines="1">CG</string_value>
+            </family>
+            <degree>
+              <integer_value rank="0">2</integer_value>
+            </degree>
+          </element>
+          <initial_condition type="initial_condition" name="WholeMesh">
+            <constant name="dim">
+              <real_value shape="2" dim1="dim" rank="1">0 0</real_value>
+            </constant>
+          </initial_condition>
+          <boundary_condition name="Top">
+            <boundary_ids>
+              <integer_value shape="1" rank="1">4</integer_value>
+            </boundary_ids>
+            <sub_components name="y">
+              <components>
+                <integer_value shape="1" rank="1">1</integer_value>
+              </components>
+              <type type="boundary_condition" name="Dirichlet">
+                <constant>
+                  <real_value rank="0">0.</real_value>
+                </constant>
+              </type>
+            </sub_components>
+          </boundary_condition>
+          <boundary_condition name="Left">
+            <boundary_ids>
+              <integer_value shape="1" rank="1">1</integer_value>
+            </boundary_ids>
+            <sub_components name="x">
+              <components>
+                <integer_value shape="1" rank="1">0</integer_value>
+              </components>
+              <type type="boundary_condition" name="Dirichlet">
+                <constant>
+                  <real_value rank="0">0.</real_value>
+                </constant>
+              </type>
+            </sub_components>
+          </boundary_condition>
+          <boundary_condition name="Right">
+            <boundary_ids>
+              <integer_value shape="1" rank="1">2</integer_value>
+            </boundary_ids>
+            <sub_components name="x">
+              <components>
+                <integer_value shape="1" rank="1">0</integer_value>
+              </components>
+              <type type="boundary_condition" name="Dirichlet">
+                <constant>
+                  <real_value rank="0">0.</real_value>
+                </constant>
+              </type>
+            </sub_components>
+          </boundary_condition>
+        </rank>
+      </type>
+      <diagnostics>
+        <include_in_visualization/>
+      </diagnostics>
+    </field>
+    <coefficient name="IntensityFactor">
+      <ufl_symbol name="global">
+        <string_value lines="1">intensity</string_value>
+      </ufl_symbol>
+      <type name="Constant">
+        <rank name="Scalar" rank="0">
+          <value type="value" name="WholeMesh">
+            <constant>
+              <real_value rank="0">1.</real_value>
+            </constant>
+          </value>
+        </rank>
+      </type>
+      <diagnostics/>
+    </coefficient>
+    <coefficient name="Temperature">
+      <ufl_symbol name="global">
+        <string_value lines="1">T</string_value>
+      </ufl_symbol>
+      <type name="Expression">
+        <rank name="Scalar" rank="0">
+          <element name="P2">
+            <family>
+              <string_value lines="1">CG</string_value>
+            </family>
+            <degree>
+              <integer_value rank="0">2</integer_value>
+            </degree>
+          </element>
+          <value type="value" name="WholeMesh">
+            <cpp rank="0">
+              <members>
+                <string_value lines="20" type="code" language="cpp">GenericFunction_ptr l_ptr;
+GenericFunction_ptr intensity_ptr;
+double l, intensity;</string_value>
+              </members>
+              <initialization>
+                <string_value lines="20" type="code" language="cpp">l_ptr = bucket()-&gt;fetch_system("Damage")-&gt;fetch_coeff("CrackLength")-&gt;genericfunction_ptr(time());
+intensity_ptr = bucket()-&gt;fetch_system("ThermoElasticity")-&gt;fetch_coeff("IntensityFactor")-&gt;genericfunction_ptr(time());
+
+l = double(*std::dynamic_pointer_cast&lt;dolfin::Constant&gt;(l_ptr));
+intensity = double(*std::dynamic_pointer_cast&lt;dolfin::Constant&gt;(intensity_ptr));</string_value>
+              </initialization>
+              <eval>
+                <string_value lines="20" type="code" language="cpp">double delta_T = intensity*sqrt(3./(8.*l));
+values[0] = -delta_T*erfc(x[1]/l/(bucket()-&gt;current_time()));</string_value>
+              </eval>
+            </cpp>
+          </value>
+        </rank>
+      </type>
+      <diagnostics>
+        <include_in_visualization/>
+      </diagnostics>
+    </coefficient>
+    <coefficient name="BulkModulus">
+      <ufl_symbol name="global">
+        <string_value lines="1">Ke</string_value>
+      </ufl_symbol>
+      <type name="Constant">
+        <rank name="Scalar" rank="0">
+          <value type="value" name="WholeMesh">
+            <constant>
+              <real_value rank="0">0.8333333333333334</real_value>
+            </constant>
+          </value>
+        </rank>
+      </type>
+      <diagnostics/>
+    </coefficient>
+    <coefficient name="ShearModulus">
+      <ufl_symbol name="global">
+        <string_value lines="1">G</string_value>
+      </ufl_symbol>
+      <type name="Constant">
+        <rank name="Scalar" rank="0">
+          <value type="value" name="WholeMesh">
+            <constant>
+              <real_value rank="0">0.3846153846153846</real_value>
+            </constant>
+          </value>
+        </rank>
+      </type>
+      <diagnostics/>
+    </coefficient>
+    <nonlinear_solver name="Solver">
+      <type name="SNES">
+        <form name="Residual" rank="0">
+          <string_value lines="20" type="code" language="python"># Displacement residual
+epsilon_t = sym(grad(u_t))
+F = inner(epsilon_t, sigma)*dx</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">F</string_value>
+          </ufl_symbol>
+        </form>
+        <form name="Jacobian" rank="1">
+          <string_value lines="20" type="code" language="python">J = derivative(F,us_i,us_a)</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">J</string_value>
+          </ufl_symbol>
+        </form>
+        <form_representation name="quadrature"/>
+        <quadrature_rule name="default"/>
+        <snes_type name="ksponly"/>
+        <relative_error>
+          <real_value rank="0">1e-08</real_value>
+        </relative_error>
+        <absolute_error>
+          <real_value rank="0">1e-13</real_value>
+        </absolute_error>
+        <max_iterations>
+          <integer_value rank="0">50</integer_value>
+        </max_iterations>
+        <monitors>
+          <view_snes/>
+          <residual/>
+        </monitors>
+        <linear_solver>
+          <iterative_method name="preonly"/>
+          <preconditioner name="lu">
+            <factorization_package name="mumps"/>
+          </preconditioner>
+          <remove_null_space>
+            <null_space name="HorizontalDisplacement">
+              <field name="Displacement">
+                <components>
+                  <integer_value shape="1" rank="1">0</integer_value>
+                </components>
+                <constant>
+                  <real_value rank="0">1.0</real_value>
+                </constant>
+              </field>
+              <monitors/>
+            </null_space>
+            <monitors/>
+          </remove_null_space>
+        </linear_solver>
+        <never_ignore_solver_failures/>
+      </type>
+      <solve name="in_timeloop"/>
+    </nonlinear_solver>
+  </system>
+  <system name="ElasticEnergyDensity">
+    <mesh name="Mesh"/>
+    <ufl_symbol name="global">
+      <string_value lines="1">upsi</string_value>
+    </ufl_symbol>
+    <field name="Psi">
+      <ufl_symbol name="global">
+        <string_value lines="1">psi_p</string_value>
+      </ufl_symbol>
+      <type name="Function">
+        <rank name="Scalar" rank="0">
+          <element name="P2">
+            <family>
+              <string_value lines="1">CG</string_value>
+            </family>
+            <degree>
+              <integer_value rank="0">2</integer_value>
+            </degree>
+          </element>
+          <initial_condition type="initial_condition" name="WholeMesh">
+            <constant>
+              <real_value rank="0">0</real_value>
+            </constant>
+          </initial_condition>
+        </rank>
+      </type>
+      <diagnostics>
+        <include_in_visualization/>
+      </diagnostics>
+    </field>
+    <nonlinear_solver name="Solver">
+      <type name="SNES">
+        <form name="Residual" rank="0">
+          <string_value lines="20" type="code" language="python">F = psi_p_t*(psi_p_i - psi)*dx</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">F</string_value>
+          </ufl_symbol>
+        </form>
+        <form name="Jacobian" rank="1">
+          <string_value lines="20" type="code" language="python">J = derivative(F,upsi_i,upsi_a)</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">J</string_value>
+          </ufl_symbol>
+        </form>
+        <form_representation name="quadrature"/>
+        <quadrature_rule name="default"/>
+        <snes_type name="ls">
+          <ls_type name="cubic"/>
+          <convergence_test name="default"/>
+        </snes_type>
+        <relative_error>
+          <real_value rank="0">1e-06</real_value>
+        </relative_error>
+        <max_iterations>
+          <integer_value rank="0">50</integer_value>
+        </max_iterations>
+        <monitors>
+          <view_snes/>
+          <residual/>
+        </monitors>
+        <linear_solver>
+          <iterative_method name="preonly"/>
+          <preconditioner name="lu">
+            <factorization_package name="mumps"/>
+          </preconditioner>
+        </linear_solver>
+        <never_ignore_solver_failures/>
+      </type>
+      <solve name="in_timeloop"/>
+    </nonlinear_solver>
+  </system>
+  <system name="ElasticEnergyHistory">
+    <mesh name="Mesh"/>
+    <ufl_symbol name="global">
+      <string_value lines="1">uH</string_value>
+    </ufl_symbol>
+    <field name="PsiHistory">
+      <ufl_symbol name="global">
+        <string_value lines="1">H</string_value>
+      </ufl_symbol>
+      <type name="Function">
+        <rank name="Scalar" rank="0">
+          <element name="P2">
+            <family>
+              <string_value lines="1">CG</string_value>
+            </family>
+            <degree>
+              <integer_value rank="0">2</integer_value>
+            </degree>
+          </element>
+          <initial_condition type="initial_condition" name="WholeMesh">
+            <constant>
+              <real_value rank="0">0</real_value>
+            </constant>
+          </initial_condition>
+        </rank>
+      </type>
+      <diagnostics>
+        <include_in_visualization/>
+      </diagnostics>
+    </field>
+    <nonlinear_solver name="Solver">
+      <type name="SNES">
+        <form name="Residual" rank="0">
+          <string_value lines="20" type="code" language="python">F = H_t*(H_i - H_n + conditional(gt(psi_p_i, H_n), H_n - psi_p_i, 0.))*dx</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">F</string_value>
+          </ufl_symbol>
+        </form>
+        <form name="Jacobian" rank="1">
+          <string_value lines="20" type="code" language="python">J = derivative(F,uH_i,uH_a)</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">J</string_value>
+          </ufl_symbol>
+        </form>
+        <form_representation name="quadrature"/>
+        <quadrature_rule name="default"/>
+        <snes_type name="ls">
+          <ls_type name="cubic"/>
+          <convergence_test name="default"/>
+        </snes_type>
+        <relative_error>
+          <real_value rank="0">1e-06</real_value>
+        </relative_error>
+        <max_iterations>
+          <integer_value rank="0">50</integer_value>
+        </max_iterations>
+        <monitors>
+          <view_snes/>
+          <residual/>
+        </monitors>
+        <linear_solver>
+          <iterative_method name="preonly"/>
+          <preconditioner name="lu">
+            <factorization_package name="mumps"/>
+          </preconditioner>
+        </linear_solver>
+        <never_ignore_solver_failures/>
+      </type>
+      <solve name="in_timeloop"/>
+    </nonlinear_solver>
+  </system>
+  <system name="Damage">
+    <mesh name="Mesh"/>
+    <ufl_symbol name="global">
+      <string_value lines="1">ud</string_value>
+    </ufl_symbol>
+    <field name="PhaseField">
+      <ufl_symbol name="global">
+        <string_value lines="1">d</string_value>
+      </ufl_symbol>
+      <type name="Function">
+        <rank name="Scalar" rank="0">
+          <element name="P1">
+            <family>
+              <string_value lines="1">CG</string_value>
+            </family>
+            <degree>
+              <integer_value rank="0">1</integer_value>
+            </degree>
+          </element>
+          <initial_condition type="initial_condition" name="WholeMesh">
+            <constant>
+              <real_value rank="0">0</real_value>
+            </constant>
+          </initial_condition>
+        </rank>
+      </type>
+      <diagnostics>
+        <include_in_visualization/>
+      </diagnostics>
+    </field>
+    <coefficient name="ResidualStiffness">
+      <ufl_symbol name="global">
+        <string_value lines="1">eta</string_value>
+      </ufl_symbol>
+      <type name="Constant">
+        <rank name="Scalar" rank="0">
+          <value type="value" name="WholeMesh">
+            <constant>
+              <real_value rank="0">1.e-4</real_value>
+            </constant>
+          </value>
+        </rank>
+      </type>
+      <diagnostics/>
+      <comment>Residual stiffness in degradation function</comment>
+    </coefficient>
+    <coefficient name="CrackLength">
+      <ufl_symbol name="global">
+        <string_value lines="1">l</string_value>
+      </ufl_symbol>
+      <type name="Constant">
+        <rank name="Scalar" rank="0">
+          <value type="value" name="WholeMesh">
+            <constant>
+              <real_value rank="0">1.</real_value>
+            </constant>
+          </value>
+        </rank>
+      </type>
+      <diagnostics/>
+      <comment>Damage lengthscale</comment>
+    </coefficient>
+    <coefficient name="FractureEnergy">
+      <ufl_symbol name="global">
+        <string_value lines="1">G_c</string_value>
+      </ufl_symbol>
+      <type name="Constant">
+        <rank name="Scalar" rank="0">
+          <value type="value" name="WholeMesh">
+            <constant>
+              <real_value rank="0">1.</real_value>
+            </constant>
+          </value>
+        </rank>
+      </type>
+      <diagnostics/>
+      <comment>Griffith fracture energy</comment>
+    </coefficient>
+    <coefficient name="MaximumDamage">
+      <ufl_symbol name="global">
+        <string_value lines="1">dmax</string_value>
+      </ufl_symbol>
+      <type name="Expression">
+        <rank name="Scalar" rank="0">
+          <element name="P1">
+            <family>
+              <string_value lines="1">CG</string_value>
+            </family>
+            <degree>
+              <integer_value rank="0">1</integer_value>
+            </degree>
+          </element>
+          <value type="value" name="WholeMesh">
+            <cpp rank="0">
+              <members>
+                <string_value lines="20" type="code" language="cpp">FunctionBucket_ptr d_ptr;
+mutable double value;
+mutable int last_timestep;
+SolverBucket_ptr solver;</string_value>
+              </members>
+              <initialization>
+                <string_value lines="20" type="code" language="cpp">d_ptr=bucket()-&gt;fetch_system("Damage")-&gt;fetch_field("PhaseField");
+last_timestep = -1;
+value = -666.e6;
+solver = bucket()-&gt;fetch_system("Damage")-&gt;fetch_solver("Solver");</string_value>
+              </initialization>
+              <eval>
+                <string_value lines="20" type="code" language="cpp">if (bucket()-&gt;timestep_count() != last_timestep)
+{
+  value =d_ptr-&gt;max("iterated");
+  log(INFO, "in Max damage eval t: %d, %d; ... value: %g", 
+                                   last_timestep, bucket()-&gt;timestep_count(),
+                                   value);
+  last_timestep = bucket()-&gt;timestep_count();;
+
+}
+values[0] = value;</string_value>
+              </eval>
+            </cpp>
+          </value>
+        </rank>
+      </type>
+      <diagnostics>
+        <include_in_visualization/>
+      </diagnostics>
+      <comment>Ouput maximum damage at each timestep</comment>
+    </coefficient>
+    <nonlinear_solver name="Solver">
+      <type name="SNES">
+        <form name="Residual" rank="0">
+          <string_value lines="20" type="code" language="python">F = d_t*(G_c*d_i - 2.*(1. - d_i)*H_i)*dx \
+    + G_c*l*l*inner(grad(d_t), grad(d_i))*dx</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">F</string_value>
+          </ufl_symbol>
+        </form>
+        <form name="Jacobian" rank="1">
+          <string_value lines="20" type="code" language="python">J = derivative(F,ud_i,ud_a)</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">J</string_value>
+          </ufl_symbol>
+        </form>
+        <form_representation name="quadrature"/>
+        <quadrature_rule name="default"/>
+        <snes_type name="ls">
+          <ls_type name="cubic"/>
+          <convergence_test name="default"/>
+        </snes_type>
+        <relative_error>
+          <real_value rank="0">1e-06</real_value>
+        </relative_error>
+        <max_iterations>
+          <integer_value rank="0">50</integer_value>
+        </max_iterations>
+        <monitors>
+          <view_snes/>
+          <residual/>
+        </monitors>
+        <linear_solver>
+          <iterative_method name="preonly"/>
+          <preconditioner name="lu">
+            <factorization_package name="mumps"/>
+          </preconditioner>
+        </linear_solver>
+        <never_ignore_solver_failures/>
+      </type>
+      <solve name="in_timeloop"/>
+    </nonlinear_solver>
+  </system>
+  <system name="Stress">
+    <mesh name="Mesh"/>
+    <ufl_symbol name="global">
+      <string_value lines="1">usigma</string_value>
+    </ufl_symbol>
+    <field name="Sigma">
+      <ufl_symbol name="global">
+        <string_value lines="1">sigmap</string_value>
+      </ufl_symbol>
+      <type name="Function">
+        <rank name="Tensor" rank="2">
+          <element name="P1DG">
+            <family>
+              <string_value lines="1">DG</string_value>
+            </family>
+            <degree>
+              <integer_value rank="0">1</integer_value>
+            </degree>
+          </element>
+        </rank>
+      </type>
+      <diagnostics>
+        <include_in_visualization/>
+      </diagnostics>
+    </field>
+    <nonlinear_solver name="Solve">
+      <type name="SNES">
+        <form name="Residual" rank="0">
+          <string_value lines="20" type="code" language="python">F = inner(sigmap_t, sigmap_i - sigma)*dx</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">F</string_value>
+          </ufl_symbol>
+        </form>
+        <form name="Jacobian" rank="1">
+          <string_value lines="20" type="code" language="python">J = derivative(F,usigma_i,usigma_a)</string_value>
+          <ufl_symbol name="solver">
+            <string_value lines="1">J</string_value>
+          </ufl_symbol>
+        </form>
+        <form_representation name="quadrature"/>
+        <quadrature_rule name="default"/>
+        <snes_type name="ls">
+          <ls_type name="cubic"/>
+          <convergence_test name="default"/>
+        </snes_type>
+        <relative_error>
+          <real_value rank="0">1e-06</real_value>
+        </relative_error>
+        <absolute_error>
+          <real_value rank="0">1e-10</real_value>
+        </absolute_error>
+        <max_iterations>
+          <integer_value rank="0">20</integer_value>
+        </max_iterations>
+        <monitors>
+          <residual/>
+        </monitors>
+        <linear_solver>
+          <iterative_method name="preonly"/>
+          <preconditioner name="lu">
+            <factorization_package name="mumps"/>
+          </preconditioner>
+        </linear_solver>
+        <never_ignore_solver_failures/>
+      </type>
+      <solve name="with_diagnostics"/>
+    </nonlinear_solver>
+  </system>
+</terraferma_options>
